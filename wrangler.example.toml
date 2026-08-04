@@ -17,7 +17,7 @@ pages_build_output_dir = "public"
 command = "npm run build:css"
 
 [[d1_databases]]
-binding = "NAV_DB"
+binding = "NAV_DB1"
 database_name = "book1"
 database_id = "PASTE_YOUR_D1_DATABASE_ID_HERE"
 

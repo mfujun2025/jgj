@@ -21,7 +21,7 @@ export async function isAdminAuthenticated(request, env) {
   if (!match) return false;
 
   const token = match[1];
-  const session = await env.NAV_AUTH.get(`session_${token}`);
+  const session = await env.NAV_AUTH1.get(`session_${token}`);
 
   return Boolean(session);
 }
@@ -56,7 +56,7 @@ export function getHomeDirtyKey(scope) {
 
 export async function getHomeCacheDirtyValue(env, scope) {
   try {
-    return await env.NAV_AUTH.get(getHomeDirtyKey(scope));
+    return await env.NAV_AUTH1.get(getHomeDirtyKey(scope));
   } catch (e) {
     console.error('Failed to read home cache dirty value:', e);
     return null;
@@ -75,7 +75,7 @@ export async function clearHomeCache(env, scope = 'all') {
       keys.push(getHomeCacheKey('private'));
     }
 
-    await Promise.all(keys.map(key => env.NAV_AUTH.delete(key)));
+    await Promise.all(keys.map(key => env.NAV_AUTH1.delete(key)));
   } catch (e) {
     console.error('Failed to clear home cache:', e);
   }
@@ -95,7 +95,7 @@ export async function markHomeCacheDirty(env, scope = 'all') {
     }
 
     await Promise.all(
-      keys.map(key => env.NAV_AUTH.put(key, dirtyValue, { expirationTtl: HOME_CACHE_TTL }))
+      keys.map(key => env.NAV_AUTH1.put(key, dirtyValue, { expirationTtl: HOME_CACHE_TTL }))
     );
   } catch (e) {
     console.error('Failed to mark home cache dirty:', e);
@@ -116,13 +116,13 @@ export async function clearHomeCacheDirty(env, scope = 'all', expectedValue = nu
 
     await Promise.all(keys.map(async (key) => {
       if (expectedValue === null) {
-        await env.NAV_AUTH.delete(key);
+        await env.NAV_AUTH1.delete(key);
         return;
       }
 
-      const latestValue = await env.NAV_AUTH.get(key);
+      const latestValue = await env.NAV_AUTH1.get(key);
       if (latestValue === expectedValue) {
-        await env.NAV_AUTH.delete(key);
+        await env.NAV_AUTH1.delete(key);
       }
     }));
   } catch (e) {
@@ -191,12 +191,12 @@ export function timingSafeEqual(a, b) {
  */
 export async function checkRateLimit(env, key, maxRequests, windowSeconds) {
   try {
-    const current = await env.NAV_AUTH.get(key);
+    const current = await env.NAV_AUTH1.get(key);
     const count = current ? parseInt(current, 10) : 0;
     if (count >= maxRequests) {
       return { allowed: false, remaining: 0 };
     }
-    await env.NAV_AUTH.put(key, String(count + 1), { expirationTtl: windowSeconds });
+    await env.NAV_AUTH1.put(key, String(count + 1), { expirationTtl: windowSeconds });
     return { allowed: true, remaining: maxRequests - count - 1 };
   } catch (e) {
     console.error('Rate limit check failed:', e);
@@ -216,7 +216,7 @@ export async function checkRateLimit(env, key, maxRequests, windowSeconds) {
 export async function checkLoginRateLimit(env, ip, maxAttempts, lockoutSeconds) {
   const key = `login_fail_${ip}`;
   try {
-    const current = await env.NAV_AUTH.get(key);
+    const current = await env.NAV_AUTH1.get(key);
     const count = current ? parseInt(current, 10) : 0;
     if (count >= maxAttempts) {
       return { locked: true, attemptsLeft: 0 };
@@ -234,9 +234,9 @@ export async function checkLoginRateLimit(env, ip, maxAttempts, lockoutSeconds) 
 export async function recordLoginFailure(env, ip, maxAttempts, lockoutSeconds) {
   const key = `login_fail_${ip}`;
   try {
-    const current = await env.NAV_AUTH.get(key);
+    const current = await env.NAV_AUTH1.get(key);
     const count = current ? parseInt(current, 10) : 0;
-    await env.NAV_AUTH.put(key, String(count + 1), { expirationTtl: lockoutSeconds });
+    await env.NAV_AUTH1.put(key, String(count + 1), { expirationTtl: lockoutSeconds });
   } catch (e) {
     console.error('Record login failure failed:', e);
   }
@@ -248,7 +248,7 @@ export async function recordLoginFailure(env, ip, maxAttempts, lockoutSeconds) {
 export async function clearLoginFailures(env, ip) {
   const key = `login_fail_${ip}`;
   try {
-    await env.NAV_AUTH.delete(key);
+    await env.NAV_AUTH1.delete(key);
   } catch (e) {
     // 忽略清除失败
   }
@@ -261,7 +261,7 @@ export async function validateCsrfToken(request, env) {
   const sessionToken = getSessionToken(request);
   if (!sessionToken) return { valid: false };
 
-  const storedToken = await env.NAV_AUTH.get(`csrf_${sessionToken}`);
+  const storedToken = await env.NAV_AUTH1.get(`csrf_${sessionToken}`);
   if (!storedToken) return { valid: false };
 
   const headerToken = request.headers.get('X-CSRF-Token');
